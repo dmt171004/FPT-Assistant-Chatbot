@@ -1,0 +1,38 @@
+# ===== Python =====
+.venv/
+__pycache__/
+*.pyc
+.env
+
+# ===== RAG PRIVATE DATA =====
+backend/app/rag/data/
+backend/app/rag/vector_store/
+backend/app/rag/chunks/
+
+# ===== Node / Frontend =====
+node_modules/
+dist/
+dist-ssr/
+build/
+*.local
+
+# ===== Logs =====
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ===== Editor / IDE =====
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# ===== OS =====
+.DS_Store
+Thumbs.db
+
+# ===== Swap files =====
+*.sw?
