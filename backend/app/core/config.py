@@ -14,3 +14,12 @@ RAG_DATA_DIR = os.path.join(BASE_DIR, "rag", "data")
 RAG_CHUNKS_DIR = os.path.join(BASE_DIR, "rag", "chunks")
 VECTOR_STORE_DIR = os.path.join(BASE_DIR, "rag", "vector_store")
 PROMPT_DIR = os.path.join(BASE_DIR, "prompts")
+
+DATABASE_URL = os.getenv("DATABASE_URL")
+JWT_SECRET = os.getenv("JWT_SECRET")
+
+if not DATABASE_URL:
+    raise RuntimeError("DATABASE_URL is not set in .env")
+
+if not JWT_SECRET:
+    raise RuntimeError("JWT_SECRET is not set in .env")

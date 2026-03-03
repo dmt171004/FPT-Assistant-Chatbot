@@ -8,11 +8,12 @@ from tqdm import tqdm
 from app.core.config import (
     OPENAI_API_KEY,
     RAG_DATA_DIR,
-    VECTOR_STORE_DIR,
+    VECTOR_STORE_DIR
 )
 
 client = OpenAI(api_key=OPENAI_API_KEY)
 EMBEDDING_MODEL = "text-embedding-3-large"
+
 
 def load_pdf_files():
     """
