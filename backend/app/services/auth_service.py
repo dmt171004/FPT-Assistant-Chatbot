@@ -1,55 +1,88 @@
 from datetime import datetime, timedelta
 from jose import jwt
 from passlib.context import CryptContext
+from sqlalchemy.orm import Session
 
-# 🔐 Config JWT (sau này đưa vào config.py)
-SECRET_KEY = "SUPER_SECRET_KEY_CHANGE_LATER"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60
+from app.models.user import User
+from app.core.config import (
+    JWT_SECRET,
+    JWT_ALGORITHM,
+    ACCESS_TOKEN_EXPIRE_MINUTES,
+)
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# -----------------------------
-# MOCK USER (tạm thời)
-# -----------------------------
-fake_users = [
-    {
-        "id": "1",
-        "username": "tri",
-        "password_hash": pwd_context.hash("123456")
-    }
-]
 
+# =========================
+# PASSWORD
+# =========================
 
-def verify_password(plain_password, hashed_password):
+def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 
 
-def get_user_by_username(username: str):
-    for user in fake_users:
-        if user["username"] == username:
-            return user
-    return None
+def hash_password(password: str) -> str:
+    return pwd_context.hash(password)
 
 
-def create_access_token(data: dict):
+# =========================
+# JWT
+# =========================
+
+def create_access_token(data: dict) -> str:
     to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    expire = datetime.utcnow() + timedelta(
+        minutes=ACCESS_TOKEN_EXPIRE_MINUTES
+    )
     to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+    return jwt.encode(
+        to_encode,
+        JWT_SECRET,
+        algorithm=JWT_ALGORITHM
+    )
 
 
-def login_user(username: str, password: str):
-    user = get_user_by_username(username)
+# =========================
+# DATABASE
+# =========================
+
+def get_user_by_username(db: Session, username: str):
+    return db.query(User).filter(User.username == username).first()
+
+
+def create_user(db: Session, username: str, password: str):
+    hashed_password = hash_password(password)
+
+    user = User(
+        username=username,
+        email=f"{username}@example.com",  # tạm thời
+        password_hash=hashed_password,
+    )
+
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    return user
+
+
+# =========================
+# LOGIN
+# =========================
+
+def login_user(db: Session, username: str, password: str):
+
+    user = get_user_by_username(db, username)
 
     if not user:
         return None
 
-    if not verify_password(password, user["password_hash"]):
+    if not verify_password(password, user.password_hash):
         return None
 
     access_token = create_access_token(
-        data={"sub": user["username"]}
+        {"sub": str(user.id)}
     )
 
     return access_token

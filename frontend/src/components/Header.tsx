@@ -1,9 +1,11 @@
 import { Link, useLocation } from "react-router-dom";
 import { MessageSquare, Info, GraduationCap } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/context/AuthContext";
 
 export function Header() {
   const location = useLocation();
+  const { token, logout } = useAuth();
 
   const navItems = [
     { path: "/", label: "Chat", icon: MessageSquare },
@@ -50,6 +52,14 @@ export function Header() {
               </Link>
             );
           })}
+          {token && (
+            <button
+              onClick={logout}
+              className="ml-4 rounded-lg px-4 py-2 text-sm font-medium text-destructive hover:bg-secondary"
+            >
+              Logout
+            </button>
+          )}
         </nav>
       </div>
     </header>

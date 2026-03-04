@@ -5,6 +5,7 @@ import { ChatInput } from "./ChatInput";
 import { TypingIndicator } from "./TypingIndicator";
 import { QuickActions } from "./QuickActions";
 import { VoiceModeOverlay } from "./VoiceModeOverlay";
+import { api } from "@/lib/api";
 
 export function ChatWindow() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -36,23 +37,14 @@ export function ChatWindow() {
       setIsLoading(true);
 
       try {
-        // 2. Gửi request lên Backend
-        const res = await fetch("http://localhost:8000/api/v1/chat", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            message: content,
-            image: imageUrl || null, 
-          }),
+        
+
+        const response = await api.post("/api/v1/chat", {
+          message: content,
+          image: imageUrl || null,
         });
 
-        if (!res.ok) {
-          throw new Error("Backend error");
-        }
-
-        const data = await res.json();
+        const data = response.data;
 
         // 3. Xử lý phản hồi từ Assistant
         const assistantMessage: Message = {
