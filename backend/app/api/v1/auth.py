@@ -1,9 +1,27 @@
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends, Request
 from sqlalchemy.orm import Session
 
-from app.schemas.auth import LoginRequest, LoginResponse, MessageResponse
-from app.services.auth_service import login_user, create_user, get_user_by_username
+from app.schemas.auth import (
+    LoginRequest,
+    LoginResponse,
+    MessageResponse,
+    ForgotPasswordRequest,
+    ResetPasswordRequest,
+    RegisterRequest
+)
+
+from app.services.auth_service import (
+    register_user,
+    get_user_by_email,
+    hash_password,
+    create_reset_token,
+    verify_reset_token,
+    login_user
+)
+
+from app.services.email_service import send_reset_email
 from app.db.deps import get_db
+from app.core.logger import logger
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -12,44 +30,143 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
 # REGISTER
 # =========================
 @router.post("/register", response_model=MessageResponse)
-def register(request: LoginRequest, db: Session = Depends(get_db)):
+def register(request: RegisterRequest, db: Session = Depends(get_db), req: Request = None):
 
-    # Kiểm tra username đã tồn tại chưa
-    existing_user = get_user_by_username(db, request.username)
-    if existing_user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Username already exists"
+    ip = req.client.host if req else "Unknown"
+
+    try:
+        register_user(
+            db,
+            username=request.username,
+            email=request.email,
+            password=request.password
         )
 
-    user = create_user(db, request.username, request.password)
+        logger.info(f"REGISTER SUCCESS - {request.email} - IP: {ip}")
 
-    return MessageResponse(
-        message=f"User created successfully (id={user.id})"
-    )
+        return MessageResponse(
+            message="User created successfully"
+        )
+
+    except HTTPException as e:
+        logger.warning(
+            f"REGISTER FAILED - {request.email} - "
+            f"Reason: {e.detail} - IP: {ip}"
+        )
+        raise e
+
+    except Exception as e:
+        logger.error(
+            f"REGISTER ERROR - {request.email} - "
+            f"Unexpected: {str(e)} - IP: {ip}"
+        )
+        raise HTTPException(
+            status_code=500,
+            detail="Internal server error"
+        )
 
 
 # =========================
 # LOGIN
 # =========================
 @router.post("/login", response_model=LoginResponse)
-def login(request: LoginRequest, db: Session = Depends(get_db)):
+def login(request: LoginRequest, db: Session = Depends(get_db), req: Request = None):
 
-    token = login_user(db, request.username, request.password)
+    ip = req.client.host if req else "Unknown"
 
-    if not token:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid username or password"
+    try:
+        token = login_user(db, request.identifier, request.password)
+
+        logger.info(f"LOGIN SUCCESS - {request.identifier} - IP: {ip}")
+
+        return LoginResponse(access_token=token)
+
+    except HTTPException as e:
+        logger.warning(
+            f"LOGIN FAILED - {request.identifier} - "
+            f"Reason: {e.detail} - IP: {ip}"
         )
+        raise e
 
-    return LoginResponse(access_token=token)
+    except Exception as e:
+        logger.error(
+            f"LOGIN ERROR - {request.identifier} - "
+            f"{str(e)} - IP: {ip}"
+        )
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 # =========================
 # LOGOUT
 # =========================
 @router.post("/logout", response_model=MessageResponse)
-def logout():
-    # JWT là stateless → client chỉ cần xóa token
+def logout(req: Request):
+
+    ip = req.client.host
+
+    logger.info(f"LOGOUT - IP: {ip}")
+
     return MessageResponse(message="Logout successful")
+
+
+# =========================
+# FORGOT PASSWORD
+# =========================
+@router.post("/forgot-password", response_model=MessageResponse)
+async def forgot_password(
+    request: ForgotPasswordRequest,
+    db: Session = Depends(get_db),
+    req: Request = None
+):
+    ip = req.client.host if req else "Unknown"
+
+    user = get_user_by_email(db, request.email)
+
+    # Email không tồn tại
+    if not user:
+        logger.warning(f"RESET FAILED - Email not found: {request.email} - IP: {ip}")
+        raise HTTPException(
+            status_code=404,
+            detail="Email does not exist."
+        )
+
+    # Email tồn tại → gửi reset mail
+    token = create_reset_token(db, user)
+    await send_reset_email(user.email, token)
+
+    logger.info(f"RESET EMAIL SENT - {request.email} - IP: {ip}")
+
+    return MessageResponse(
+        message="Password reset link has been sent to your email."
+    )
+
+
+# =========================
+# RESET PASSWORD
+# =========================
+@router.post("/reset-password", response_model=MessageResponse)
+def reset_password(
+    request: ResetPasswordRequest,
+    db: Session = Depends(get_db),
+    req: Request = None
+):
+    ip = req.client.host if req else "Unknown"
+
+    user = verify_reset_token(db, request.token)
+
+    if not user:
+        logger.warning(f"RESET FAILED - Invalid token - IP: {ip}")
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid or expired token"
+        )
+
+    user.password_hash = hash_password(request.new_password)
+    user.reset_token = None
+    user.token_expiry = None
+
+    db.commit()
+
+    logger.info(f"PASSWORD RESET SUCCESS - {user.email} - IP: {ip}")
+
+    return MessageResponse(message="Password reset successful")

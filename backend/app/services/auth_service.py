@@ -1,13 +1,18 @@
 from datetime import datetime, timedelta
+import secrets
+import re
+
 from jose import jwt
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
+from fastapi import HTTPException, status
 
 from app.models.user import User
 from app.core.config import (
     JWT_SECRET,
     JWT_ALGORITHM,
     ACCESS_TOKEN_EXPIRE_MINUTES,
+    RESET_TOKEN_EXPIRE_MINUTES
 )
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -26,7 +31,20 @@ def hash_password(password: str) -> str:
 
 
 # =========================
-# JWT
+# EMAIL DOMAIN VALIDATION
+# =========================
+
+def validate_fpt_domain(email: str):
+    pattern = r"^[a-zA-Z0-9._%+-]+@(fe|fpt)\.edu\.vn$"
+    if not re.match(pattern, email):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email must belong to @fe.edu.vn or @fpt.edu.vn"
+        )
+
+
+# =========================
+# JWT LOGIN TOKEN
 # =========================
 
 def create_access_token(data: dict) -> str:
@@ -44,19 +62,46 @@ def create_access_token(data: dict) -> str:
 
 
 # =========================
-# DATABASE
+# DATABASE HELPERS
 # =========================
 
 def get_user_by_username(db: Session, username: str):
     return db.query(User).filter(User.username == username).first()
 
 
-def create_user(db: Session, username: str, password: str):
+def get_user_by_email(db: Session, email: str):
+    return db.query(User).filter(User.email == email).first()
+
+
+# =========================
+# REGISTER (BUSINESS LOGIC)
+# =========================
+
+def register_user(db: Session, username: str, email: str, password: str):
+
+    # 1️⃣ Validate domain
+    validate_fpt_domain(email)
+
+    # 2️⃣ Check email exists
+    if get_user_by_email(db, email):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email already registered"
+        )
+
+    # 3️⃣ Check username exists
+    if get_user_by_username(db, username):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username already taken"
+        )
+
+    # 4️⃣ Create user
     hashed_password = hash_password(password)
 
     user = User(
         username=username,
-        email=f"{username}@example.com",  # tạm thời
+        email=email,
         password_hash=hashed_password,
     )
 
@@ -71,18 +116,58 @@ def create_user(db: Session, username: str, password: str):
 # LOGIN
 # =========================
 
-def login_user(db: Session, username: str, password: str):
+def login_user(db: Session, identifier: str, password: str):
 
-    user = get_user_by_username(db, username)
+    if "@" in identifier:
+        user = get_user_by_email(db, identifier)
+    else:
+        user = get_user_by_username(db, identifier)
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found"
+        )
+
+    if not verify_password(password, user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect password"
+        )
+
+    token = create_access_token({"sub": str(user.id)})
+    return token
+
+
+# =========================
+# RESET TOKEN (DB-BASED)
+# =========================
+
+def create_reset_token(db: Session, user: User):
+    token = secrets.token_urlsafe(32)
+
+    expiry = datetime.utcnow() + timedelta(
+        minutes=RESET_TOKEN_EXPIRE_MINUTES
+    )
+
+    user.reset_token = token
+    user.token_expiry = expiry
+
+    db.commit()
+
+    return token
+
+
+def verify_reset_token(db: Session, token: str):
+    user = db.query(User).filter(User.reset_token == token).first()
 
     if not user:
         return None
 
-    if not verify_password(password, user.password_hash):
+    if not user.token_expiry:
         return None
 
-    access_token = create_access_token(
-        {"sub": str(user.id)}
-    )
+    if datetime.utcnow() > user.token_expiry:
+        return None
 
-    return access_token
+    return user

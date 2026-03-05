@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
+import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +11,7 @@ export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const [username, setUsername] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -19,15 +20,19 @@ export default function Login() {
       setLoading(true);
 
       const response = await api.post("/api/v1/auth/login", {
-        username: username,
-        password: password,
+        identifier,
+        password,
       });
 
       login(response.data.access_token);
+      toast.success("Login successful!");
       navigate("/");
     } catch (error: any) {
-      console.error(error);
-      alert(error.response?.data?.detail || "Login failed");
+      toast.error(
+        error.response?.data?.detail?.[0]?.msg ||
+        error.response?.data?.detail ||
+        "Invalid credentials"
+      );
     } finally {
       setLoading(false);
     }
@@ -40,9 +45,9 @@ export default function Login() {
           <h2 className="text-2xl font-bold text-center">Login</h2>
 
           <Input
-            placeholder="Username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
+            placeholder="Email or Username"
+            value={identifier}
+            onChange={(e) => setIdentifier(e.target.value)}
           />
 
           <Input
@@ -59,6 +64,15 @@ export default function Login() {
           >
             {loading ? "Logging in..." : "Login"}
           </Button>
+
+          <p className="text-sm text-center">
+            <Link
+              to="/forgot-password"
+              className="text-primary hover:underline"
+            >
+              Forgot password?
+            </Link>
+          </p>
 
           <p className="text-sm text-center text-muted-foreground">
             Don’t have an account?{" "}
