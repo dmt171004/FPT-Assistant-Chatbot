@@ -172,6 +172,12 @@ def reset_password(
 ):
     ip = req.client.host if req else "Unknown"
 
+    if request.new_password != request.confirm_password:
+        raise HTTPException(
+            status_code=400,
+            detail="Passwords do not match"
+        )
+
     validate_password(request.new_password)
 
     user = verify_reset_token(db, request.token)
