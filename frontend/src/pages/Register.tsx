@@ -13,8 +13,14 @@ export default function Register() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   const handleRegister = async () => {
+    if (password !== confirmPassword) {
+      toast.error("Passwords do not match");
+      return;
+    }
+
     try {
       setLoading(true);
 
@@ -22,16 +28,23 @@ export default function Register() {
         username,
         email,
         password,
+        confirm_password: confirmPassword,
       });
 
       toast.success("Register successful! Please login.");
       navigate("/login");
     } catch (error: any) {
-      toast.error(
-        error.response?.data?.detail?.[0]?.msg ||
-        error.response?.data?.detail ||
-        "Register failed"
-      );
+
+        const details = error.response?.data?.detail;
+        if (Array.isArray(details)) {
+          const messages = details.map((err: any) => {
+            const field = err.loc?.[1];
+            return `${field}: ${err.msg}`;
+          });
+          toast.error(messages.join(" | "));
+        } else {
+          toast.error(details || "Register failed");
+        }
     } finally {
       setLoading(false);
     }
@@ -44,23 +57,30 @@ export default function Register() {
           <h2 className="text-2xl font-bold text-center">Register</h2>
 
           <Input
-            placeholder="Username"
+            placeholder="Enter your username"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
           />
 
           <Input
             type="email"
-            placeholder="Email"
+            placeholder="Enter your email (@fpt.edu.vn or @fe.edu.vn)"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
 
           <Input
             type="password"
-            placeholder="Password"
+            placeholder="Enter your password (at least 6 characters)"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+          />
+
+          <Input
+            type="password"
+            placeholder="Confirm your password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
           />
 
           <Button

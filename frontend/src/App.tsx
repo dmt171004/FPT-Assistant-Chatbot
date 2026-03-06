@@ -21,7 +21,7 @@ const App = () => (
     <AuthProvider>
       <TooltipProvider>
 
-        {/* ✅ Sonner Toast toàn hệ thống */}
+        {/* Sonner Toast toàn hệ thống */}
         <Sonner richColors position="top-right" />
 
         <BrowserRouter>

@@ -39,7 +39,7 @@ def validate_fpt_domain(email: str):
     if not re.match(pattern, email):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email must belong to @fe.edu.vn or @fpt.edu.vn"
+            detail="Email must be @fpt.edu.vn or @fe.edu.vn"
         )
 
 
@@ -78,25 +78,30 @@ def get_user_by_email(db: Session, email: str):
 # =========================
 
 def register_user(db: Session, username: str, email: str, password: str):
+    if len(password) < 6:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password must be at least 6 characters"
+        )
 
-    # 1️⃣ Validate domain
+    # Validate domain
     validate_fpt_domain(email)
 
-    # 2️⃣ Check email exists
+    # Check email exists
     if get_user_by_email(db, email):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email already registered"
         )
 
-    # 3️⃣ Check username exists
+    # Check username exists
     if get_user_by_username(db, username):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Username already taken"
         )
 
-    # 4️⃣ Create user
+    # Create user
     hashed_password = hash_password(password)
 
     user = User(

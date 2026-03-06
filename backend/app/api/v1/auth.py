@@ -27,12 +27,32 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
 # =========================
+# PASSWORD VALIDATION
+# =========================
+
+def validate_password(password: str):
+    if len(password) < 6:
+        raise HTTPException(
+            status_code=400,
+            detail="Password must be at least 6 characters"
+        )
+
+
+# =========================
 # REGISTER
 # =========================
 @router.post("/register", response_model=MessageResponse)
 def register(request: RegisterRequest, db: Session = Depends(get_db), req: Request = None):
 
     ip = req.client.host if req else "Unknown"
+
+    validate_password(request.password)
+    
+    if request.password != request.confirm_password:
+            raise HTTPException(
+                status_code=400,
+                detail="Passwords do not match"
+            )
 
     try:
         register_user(
@@ -127,7 +147,7 @@ async def forgot_password(
         logger.warning(f"RESET FAILED - Email not found: {request.email} - IP: {ip}")
         raise HTTPException(
             status_code=404,
-            detail="Email does not exist."
+            detail="This email is not registered."
         )
 
     # Email tồn tại → gửi reset mail
@@ -151,6 +171,8 @@ def reset_password(
     req: Request = None
 ):
     ip = req.client.host if req else "Unknown"
+
+    validate_password(request.new_password)
 
     user = verify_reset_token(db, request.token)
 

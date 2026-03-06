@@ -39,7 +39,7 @@ export default function ForgotPassword() {
           </h2>
 
           <Input
-            placeholder="Enter your email"
+            placeholder="Enter your email (@fpt.edu.vn or @fe.edu.vn)"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
