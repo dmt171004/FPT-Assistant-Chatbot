@@ -31,7 +31,7 @@ export default function Register() {
         confirm_password: confirmPassword,
       });
 
-      toast.success("Register successful! Please login.");
+      toast.success("Register successful! Please check email to verify account.");
       navigate("/login");
     } catch (error: any) {
 

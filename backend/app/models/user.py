@@ -19,6 +19,10 @@ class User(Base):
 
     is_active = Column(Boolean, default=True)
 
+    is_verified = Column(Boolean, default=False)
+    verification_token = Column(Text)
+    verification_expiry = Column(DateTime)
+
     reset_token = Column(Text)
     token_expiry = Column(DateTime)
 

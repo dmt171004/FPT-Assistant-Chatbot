@@ -15,11 +15,13 @@ from app.services.auth_service import (
     get_user_by_email,
     hash_password,
     create_reset_token,
+    verify_email_token,
     verify_reset_token,
-    login_user
+    login_user,
+    create_verification_token
 )
 
-from app.services.email_service import send_reset_email
+from app.services.email_service import send_reset_email, send_verification_email
 from app.db.deps import get_db
 from app.core.logger import logger
 
@@ -42,30 +44,38 @@ def validate_password(password: str):
 # REGISTER
 # =========================
 @router.post("/register", response_model=MessageResponse)
-def register(request: RegisterRequest, db: Session = Depends(get_db), req: Request = None):
+async def register(request: RegisterRequest, db: Session = Depends(get_db), req: Request = None):
 
     ip = req.client.host if req else "Unknown"
 
     validate_password(request.password)
-    
+
     if request.password != request.confirm_password:
-            raise HTTPException(
-                status_code=400,
-                detail="Passwords do not match"
-            )
+        raise HTTPException(
+            status_code=400,
+            detail="Passwords do not match"
+        )
 
     try:
-        register_user(
+
+        # Create user
+        user = register_user(
             db,
             username=request.username,
             email=request.email,
             password=request.password
         )
 
+        # Create verification token
+        token = create_verification_token(db, user)
+
+        # Send verification email
+        await send_verification_email(user.email, token)
+
         logger.info(f"REGISTER SUCCESS - {request.email} - IP: {ip}")
 
         return MessageResponse(
-            message="User created successfully"
+            message="Registration successful. Please check your email to verify your account."
         )
 
     except HTTPException as e:
@@ -85,6 +95,26 @@ def register(request: RegisterRequest, db: Session = Depends(get_db), req: Reque
             detail="Internal server error"
         )
 
+
+# =========================
+# VERIFY EMAIL
+# =========================
+@router.get("/verify-email")
+def verify_email(token: str, db: Session = Depends(get_db)):
+
+    user = verify_email_token(db, token)
+
+    if not user:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid or expired verification token"
+        )
+
+    return {
+        "message": "Email verified successfully",
+        "username": user.username,
+        "email": user.email
+    }
 
 # =========================
 # LOGIN

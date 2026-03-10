@@ -139,6 +139,12 @@ def login_user(db: Session, identifier: str, password: str):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect password"
         )
+    
+    if not user.is_verified:
+        raise HTTPException(
+            status_code=403,
+            detail="Please verify your email before logging in"
+        )
 
     token = create_access_token({"sub": str(user.id)})
     return token
@@ -174,5 +180,38 @@ def verify_reset_token(db: Session, token: str):
 
     if datetime.utcnow() > user.token_expiry:
         return None
+
+    return user
+
+
+def create_verification_token(db: Session, user: User):
+    token = secrets.token_urlsafe(32)
+
+    expiry = datetime.utcnow() + timedelta(hours=24)
+
+    user.verification_token = token
+    user.verification_expiry = expiry
+
+    db.commit()
+
+    return token
+
+def verify_email_token(db: Session, token: str):
+
+    user = db.query(User).filter(
+        User.verification_token == token
+    ).first()
+
+    if not user:
+        return None
+
+    if datetime.utcnow() > user.verification_expiry:
+        return None
+
+    user.is_verified = True
+    user.verification_token = None
+    user.verification_expiry = None
+
+    db.commit()
 
     return user
