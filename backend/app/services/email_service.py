@@ -54,7 +54,7 @@ async def send_verification_email(email: str, token: str):
     print("Verification link:", verification_link)
 
     message = MessageSchema(
-        subject="Verify your account",
+        subject="FPT Assistant Email Verification",
         recipients=[email],
         body=f"""
 Hello,
