@@ -1,5 +1,5 @@
 import { useState, useRef, KeyboardEvent } from "react";
-import { Send, Image as ImageIcon, Mic, Phone, X, Loader2 } from "lucide-react";
+import { Send, Image as ImageIcon, Mic, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -162,15 +162,6 @@ export function ChatInput({ onSendMessage, onOpenVoiceMode, isLoading }: ChatInp
               <TooltipContent>{isRecording ? "Stop recording" : "Voice message"}</TooltipContent>
             </Tooltip>
 
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-10 w-10 text-muted-foreground" 
-              onClick={onOpenVoiceMode} 
-              disabled={isLoading || isRecording}
-            >
-              <Phone className="h-5 w-5" />
-            </Button>
           </div>
 
           <div className="relative flex-1">

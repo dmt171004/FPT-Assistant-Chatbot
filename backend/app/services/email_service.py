@@ -57,19 +57,21 @@ async def send_verification_email(email: str, token: str):
         subject="FPT Assistant Email Verification",
         recipients=[email],
         body=f"""
-Hello,
+        <p>Hello,</p>
 
-Thank you for registering an account.
+        <p>Please verify your email by clicking the button below:</p>
 
-Verify your email by opening the link below:
+        <a href="{verification_link}" 
+        style="background:#2563eb;color:white;padding:10px 16px;
+        text-decoration:none;border-radius:6px;">
+        Verify Email
+        </a>
 
-{verification_link}
+        <p>Or copy this link:</p>
 
-The link will expire in 24 hours.
-
-If you did not create this account, you can ignore this email.
-""",
-        subtype="plain"
+        <p>{verification_link}</p>
+        """,
+        subtype="html"
     )
 
     fm = FastMail(conf)
