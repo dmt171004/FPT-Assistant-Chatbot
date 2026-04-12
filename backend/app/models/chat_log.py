@@ -11,4 +11,5 @@ class ChatLog(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"))
     question = Column(Text, nullable=False)
+    answer = Column(Text)
     created_at = Column(DateTime, server_default=func.now())

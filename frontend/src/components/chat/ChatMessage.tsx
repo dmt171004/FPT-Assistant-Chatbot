@@ -37,7 +37,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
     <div
       className={cn(
         "flex gap-3 animate-fade-in-up",
-        isUser ? "flex-row-reverse" : "flex-row"
+        isUser ? "flex-row-reverse" : "flex-row",
       )}
     >
       {/* Avatar */}
@@ -46,7 +46,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
           "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl",
           isUser
             ? "bg-primary text-primary-foreground"
-            : "bg-secondary text-secondary-foreground border border-border"
+            : "bg-secondary text-secondary-foreground border border-border",
         )}
       >
         {isUser ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
@@ -58,7 +58,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
           "max-w-[85%] rounded-2xl px-4 py-3 shadow-chat",
           isUser
             ? "bg-primary text-primary-foreground rounded-tr-md"
-            : "bg-card text-card-foreground border border-border rounded-tl-md"
+            : "bg-card text-card-foreground border border-border rounded-tl-md",
         )}
       >
         {/* Type indicator (Image/Voice) */}
@@ -66,7 +66,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
           <div
             className={cn(
               "mb-2 flex items-center gap-1.5 text-xs",
-              isUser ? "text-primary-foreground/70" : "text-muted-foreground"
+              isUser ? "text-primary-foreground/70" : "text-muted-foreground",
             )}
           >
             {message.type === "image" && (
@@ -99,7 +99,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
         <div
           className={cn(
             "prose prose-sm max-w-none",
-            isUser ? "prose-invert" : "prose-gray"
+            isUser ? "prose-invert" : "prose-gray",
           )}
         >
           {message.content.split("\n").map((line, i) => {
@@ -159,7 +159,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
                     onClick={() =>
                       window.open(
                         `data:image/png;base64,${imgObj.base64}`,
-                        "_blank"
+                        "_blank",
                       )
                     }
                   >
@@ -184,9 +184,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
         <div
           className={cn(
             "mt-2 text-[10px]",
-            isUser
-              ? "text-primary-foreground/60"
-              : "text-muted-foreground"
+            isUser ? "text-primary-foreground/60" : "text-muted-foreground",
           )}
         >
           {message.timestamp.toLocaleTimeString([], {

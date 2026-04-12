@@ -1,4 +1,3 @@
-from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from datetime import datetime, timedelta
@@ -7,6 +6,7 @@ from app.db.deps import get_db
 from app.models.user import User
 from app.models.chat_log import ChatLog
 from app.services.auth_service import get_current_user_from_token, require_admin
+from fastapi import APIRouter, Depends, HTTPException, status
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 # =========================
@@ -23,12 +23,12 @@ def get_stats(
     # =========================
     # TOTAL USERS
     # =========================
-    total_users = db.query(func.count(User.id)).scalar()
+    total_users = db.query(func.count(User.id)).filter(User.role == 'user').scalar()
 
     # =========================
     # TOTAL QUESTIONS
     # =========================
-    total_questions = db.query(func.count(ChatLog.id)).scalar()
+    total_questions = db.query(func.count(ChatLog.id)).join(User).filter(User.role == 'user').scalar()
 
     # =========================
     # ONLINE USERS (5 phút)
@@ -36,6 +36,7 @@ def get_stats(
     five_minutes_ago = datetime.utcnow() - timedelta(minutes=5)
 
     online_users = db.query(func.count(User.id)).filter(
+        User.role == 'user',
         User.last_active != None,
         User.last_active >= five_minutes_ago
     ).scalar()
@@ -50,6 +51,7 @@ def get_stats(
             func.count(ChatLog.id).label("question_count")
         )
         .outerjoin(ChatLog, ChatLog.user_id == User.id)
+        .filter(User.role == 'user')
         .group_by(User.id)
         .all()
     )
