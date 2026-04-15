@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, Text, DateTime, ForeignKey
+from sqlalchemy import Column, Text, DateTime, ForeignKey, Integer, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 from app.db.session import Base
@@ -13,3 +13,8 @@ class ChatLog(Base):
     question = Column(Text, nullable=False)
     answer = Column(Text)
     created_at = Column(DateTime, server_default=func.now())
+
+    # NEW
+    topic_id = Column(Integer, ForeignKey("chat_topics.id"))
+    latency_ms = Column(Integer)
+    status = Column(String(20), default="success")

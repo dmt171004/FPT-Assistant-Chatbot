@@ -27,6 +27,7 @@ from app.core.websocket import manager
 from app.models.user import User
 
 from app.services.email_service import send_reset_email, send_verification_email
+from app.services.logging_service import log_user_activity
 from app.db.deps import get_db
 from app.core.logger import logger
 
@@ -137,6 +138,8 @@ async def login(request: LoginRequest, db: Session = Depends(get_db), req: Reque
         user.last_active = datetime.utcnow()
         db.commit()
 
+        log_user_activity(db, user.id, "login")
+
         logger.info(f"LOGIN SUCCESS - {request.identifier} - IP: {ip}")
         await manager.broadcast({"type": "STATS_UPDATED"})
 
@@ -175,6 +178,7 @@ async def logout(req: Request, db: Session = Depends(get_db), current_user: User
     current_user.last_active = None
     db.commit()
 
+    log_user_activity(db, current_user.id, "logout")
     logger.info(f"LOGOUT - User {current_user.email} - IP: {ip}")
     await manager.broadcast({"type": "STATS_UPDATED"})
 
